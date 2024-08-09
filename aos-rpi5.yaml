@@ -20,10 +20,6 @@ variables:
   XT_DOMD_DTB_NAME: "%{SOC_FAMILY}-%{MACHINE}-domd.dtb"
   XT_XEN_DTB_NAME: "%{SOC_FAMILY}-%{MACHINE}-xen.dtb"
 
-  XT_DOMU_IMAGE: "core-image-thin-initramfs"
-
-  DOMU_MACHINE: "generic-armv8-xt"
-
 
   # Aos config
   AOS_UNIT_MODEL: "rpi-multinode-zephyr"
@@ -72,6 +68,80 @@ common_data:
     - type: git
       url: "https://github.com/mlohvynenko/meta-aos-rpi5.git"
       rev: "develop"
+
+
+  # Common configuration options for all yocto-based domains
+  common_conf: &COMMON_CONF
+    - [SSTATE_DIR, "${TOPDIR}/../../../common_data/sstate"]
+    - [DL_DIR, "${TOPDIR}/../../../common_data/downloads"]
+
+    - [MACHINE, "%{MACHINE}"]
+    - [SOC_FAMILY, "%{SOC_FAMILY}"]
+    - [RPI_SOC_FAMILY, "%{SOC_FAMILY}"]
+
+    # Init manager
+    - [INIT_MANAGER, "systemd"]
+
+    # Use hypervisor console on all guests
+    - [SERIAL_CONSOLES, "115200;hvc0"]
+
+    # Skip warning about missing "virtualization" distro feature
+    - [SKIP_META_VIRT_SANITY_CHECK, "1"]
+
+    # Do not install kernel image to rootfs to decrease initrd size
+    - ["RDEPENDS_${KERNEL_PACKAGE_NAME}-base", ""]
+
+    # Make logs persistent
+    - [VOLATILE_LOG_DIR, "no"]
+
+    # Generate ext4 image files
+    - [IMAGE_FSTYPES:append, " ext4"]
+
+    # Initramfs configuration
+    - [INITRAMFS_IMAGE, "aos-image-initramfs"]
+    - [INITRAMFS_IMAGE_BUNDLE, "1"]
+    - [INITRAMFS_FSTYPES, "cpio.gz"]
+
+    # Preferred providers
+
+    # refpolicy
+    - [PREFERRED_PROVIDER_virtual/refpolicy, "refpolicy-aos"]
+
+    # Distro features
+
+    # Remove features that we are not using
+    - [
+        DISTRO_FEATURES:remove,
+        "x11 gtk gobject-introspection-data wifi nfc
+        bluetooth irda zeroconf 3g sysvinit acl alsa argp pcmcia usbgadget
+        usbhost opengl ptest multiarch wayland vulkan sysvinit pulseaudio",
+      ]
+    # Remove ptest to reduce the build time
+    - [DISTRO_FEATURES:remove, "ptest"]
+
+    # Enable SELinux
+    # - [DISTRO_FEATURES:append, " acl xattr pam selinux"]
+
+    # Machine features
+
+    # Add Capacity Aware migration Strategy (CAS)
+    - [MACHINE_FEATURES:append, " cas"]
+
+    # SDK features
+
+    # add the static lib to SDK toolchain
+    - [SDKIMAGE_FEATURES:append, " staticdev-pkgs"]
+
+    # Aos configuration
+
+    - [AOS_UNIT_MODEL, "%{AOS_UNIT_MODEL}"]
+    - [AOS_UNIT_VERSION, "%{AOS_UNIT_VERSION}"]
+    - [AOS_MAIN_NODE_ID, "%{AOS_MAIN_NODE_ID}"]
+    - [AOS_UM_COMPONENT_PREFIX, "%{AOS_UM_COMPONENT_PREFIX}"]
+
+    # Image versions
+    - [AOS_ROOTFS_IMAGE_VERSION, "%{AOS_BUNDLE_IMAGE_VERSION}"]
+    - [AOS_BOOT_IMAGE_VERSION, "%{AOS_BUNDLE_IMAGE_VERSION}"]
 
   common_yocto_layers: &COMMON_YOCTO_LAYERS
     - "../meta-openembedded/meta-oe"
@@ -123,21 +193,7 @@ components:
       type: yocto
       work_dir: "%{DOMD_BUILD_DIR}"
       conf:
-        - [SSTATE_DIR, "${TOPDIR}/../../../common_data/sstate"]
-        - [DL_DIR, "${TOPDIR}/../../../common_data/downloads"]
-        # Skip warning about missing "virtualization" distro feature
-        - [SKIP_META_VIRT_SANITY_CHECK, "1"]
-        # Init manager
-        - [INIT_MANAGER, "systemd"]
-        # Do not install kernel image to rootfs to decrease initrd size
-        - ["RDEPENDS_${KERNEL_PACKAGE_NAME}-base", ""]
-        # Remove features that we are not using
-        - [DISTRO_FEATURES:remove,
-            "x11 gtk gobject-introspection-data nfc irda zeroconf 3g sysvinit
-             acl alsa argp pcmcia usbgadget opengl ptest multiarch wayland
-             vulkan sysvinit"]
-        - [MACHINE, "%{MACHINE}"]
-        - [RPI_SOC_FAMILY, "%{SOC_FAMILY}"]
+        - *COMMON_CONF
         - [XT_DOM_NAME, "domd"]
         - [XT_DEVICE_TREES, "%{XT_XEN_DTBO_NAME}"]
         - [DOM0_OS, "%{DOM0_OS}"]
@@ -152,7 +208,18 @@ components:
         - [UART_BOORLOADER, "1"]
         - [KERNEL_IMAGETYPE_UBOOT, "Image"]
         - [DISTRO_FEATURES:append, " xen"]
-        - [DOMD_BOOTARGS, "console=ttyAMA0 earlycon=xen earlyprintk=xen clk_ignore_unused root=%{DOMD_ROOTFS_DEV} rootfstype=ext4 rootwait quiet"]
+        - [DOMD_BOOTARGS, "console=ttyAMA0 earlycon=xen earlyprintk=xen clk_ignore_unused root=%{DOMD_ROOTFS_DEV} rootfstype=ext4 rootwait quiet
+                         ro rootwait pci=pcie_bus_perf
+                         cgroup_no_v1=all systemd.unified_cgroup_hierarchy=1
+                         vardir.disk=\\\\/dev\\\\/sda2 
+                         opendisk.target=\\\\/dev\\\\/sda3 
+                         opendisk.pkcs11=optee
+                         aosupdate.disk=\\\\/dev\\\\/aosvg\\\\/workdirs
+                         aosupdate.path=um\\\\/update_rootfs
+                         aosupdate.selinux_module=\\\\/usr\\\\/share\\\\/selinux\\\\/aos\\\\/base.pp"]
+
+        # Requires to properly generate Aos FOTA
+        - [IMAGE_BASENAME, "%{AOS_BASE_IMAGE}"]
 
         # Aos configuration
         - [AOS_NODE_ID, "%{AOS_DOMD_NODE_ID}"]
@@ -203,6 +270,7 @@ components:
 
         # from aos rcar meta
         - "tmp/deploy/images/%{MACHINE}/Image-%{MACHINE}.bin"
+        - "tmp/deploy/images/%{MACHINE}/Image.gz-initramfs-%{MACHINE}.bin"
         - "tmp/deploy/images/%{MACHINE}/xen-%{MACHINE}.uImage"
         - "tmp/deploy/images/%{MACHINE}/xenpolicy-%{MACHINE}"
         - "tmp/deploy/images/%{MACHINE}/%{XT_XEN_DTB_NAME}"
@@ -252,7 +320,8 @@ images:
           "start4db.elf": "%{YOCTOS_WORK_DIR}/%{DOMD_BUILD_DIR}/tmp/deploy/images/%{MACHINE}/bootfiles/start4db.elf"
           "start4cd.elf": "%{YOCTOS_WORK_DIR}/%{DOMD_BUILD_DIR}/tmp/deploy/images/%{MACHINE}/bootfiles/start4cd.elf"
           "start4x.elf":  "%{YOCTOS_WORK_DIR}/%{DOMD_BUILD_DIR}/tmp/deploy/images/%{MACHINE}/bootfiles/start4x.elf"
-          "Image.gz": "%{YOCTOS_WORK_DIR}/%{DOMD_BUILD_DIR}/tmp/deploy/images/%{MACHINE}/Image.gz"
+          # "Image.gz": "%{YOCTOS_WORK_DIR}/%{DOMD_BUILD_DIR}/tmp/deploy/images/%{MACHINE}/Image.gz"
+          "Image.gz": "%{YOCTOS_WORK_DIR}/%{DOMD_BUILD_DIR}/tmp/deploy/images/%{MACHINE}/Image.gz-initramfs-%{MACHINE}.bin"
           "xen": "%{YOCTOS_WORK_DIR}/%{DOMD_BUILD_DIR}/tmp/deploy/images/%{MACHINE}/xen-%{MACHINE}"
           "xenpolicy": "%{YOCTOS_WORK_DIR}/%{DOMD_BUILD_DIR}/tmp/deploy/images/%{MACHINE}/xenpolicy-%{MACHINE}"
           "u-boot": "%{YOCTOS_WORK_DIR}/%{DOMD_BUILD_DIR}/tmp/deploy/images/%{MACHINE}/u-boot-%{MACHINE}.bin"
@@ -267,6 +336,12 @@ images:
           "%{SOC_FAMILY}-%{MACHINE}-mmc.dtbo": "%{YOCTOS_WORK_DIR}/%{DOMD_BUILD_DIR}/tmp/deploy/images/%{MACHINE}/%{SOC_FAMILY}-%{MACHINE}-mmc.dtbo"
           "%{SOC_FAMILY}-%{MACHINE}-pcie1.dtbo": "%{YOCTOS_WORK_DIR}/%{DOMD_BUILD_DIR}/tmp/deploy/images/%{MACHINE}/%{SOC_FAMILY}-%{MACHINE}-pcie1.dtbo"
           "zephyr.bin": "%{DOM0_BUILD_DIR}/build/zephyr/zephyr.bin"
+
+
+          # "xen": "%{YOCTOS_WORK_DIR}/%{DOMD_BUILD_DIR}/tmp/deploy/images/%{MACHINE}/xen-%{MACHINE}.uImage"
+          "linux-domd": "%{YOCTOS_WORK_DIR}/%{DOMD_BUILD_DIR}/tmp/deploy/images/%{MACHINE}/Image-%{MACHINE}.bin"
+          "initramfs-domd": "%{YOCTOS_WORK_DIR}/%{DOMD_BUILD_DIR}/tmp/deploy/images/%{MACHINE}/aos-image-initramfs-%{MACHINE}.cpio.gz"
+          "aos/version": "%{YOCTOS_WORK_DIR}/%{DOMD_BUILD_DIR}/tmp/deploy/images/%{MACHINE}/aos/boot/version"
       dom0:
         gpt_type: ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
         type: vfat
@@ -279,11 +354,21 @@ images:
     desc: "Full RPI image"
     sector_size: 512
     partitions:
-      rootfs:
+      domd_rootfs:
         gpt_type: B921B045-1DF0-41C3-AF44-4C6F280D3FAE # Linux aarch64 root
         type: raw_image
         size: 8 GiB
         image_path: "%{YOCTOS_WORK_DIR}/%{DOMD_BUILD_DIR}/tmp/deploy/images/%{MACHINE}/%{AOS_BASE_IMAGE}-%{MACHINE}.rootfs.ext4"
+
+      domd_var:
+        gpt_type: B921B045-1DF0-41C3-AF44-4C6F280D3FAE # Linux aarch64 root
+        type: raw_image
+        image_path: "%{YOCTOS_WORK_DIR}/%{DOMD_BUILD_DIR}/tmp/deploy/images/%{MACHINE}/%{AOS_BASE_IMAGE}-%{MACHINE}-var.ext4"
+
+      domd_aos:
+        gpt_type: CA7D7CCB-63ED-4C53-861C-1742536059CC # LUKS partition
+        type: empty
+        size: 4096 MiB
 
 parameters:
   # Machines
