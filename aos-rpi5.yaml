@@ -58,6 +58,10 @@ common_data:
       rev: "6a80f140e387621f62964209a2e07d3bcfb125ce"
 
     - type: git
+      url: "git://git.yoctoproject.org/meta-security"
+      rev: "scarthgap"
+
+    - type: git
       url: "https://git.yoctoproject.org/meta-selinux"
       rev: "9f5a46620a07d7b15722593a33e46a4d19392b75"
     
@@ -120,7 +124,9 @@ common_data:
     - [DISTRO_FEATURES:remove, "ptest"]
 
     # Enable SELinux
-    # - [DISTRO_FEATURES:append, " acl xattr pam selinux"]
+    - [DISTRO_FEATURES:append, " acl xattr pam selinux"]
+
+    - [FIRST_BOOT_RELABEL, "1"]
 
     # Machine features
 
@@ -142,15 +148,6 @@ common_data:
     # Image versions
     - [AOS_ROOTFS_IMAGE_VERSION, "%{AOS_BUNDLE_IMAGE_VERSION}"]
     - [AOS_BOOT_IMAGE_VERSION, "%{AOS_BUNDLE_IMAGE_VERSION}"]
-
-  common_yocto_layers: &COMMON_YOCTO_LAYERS
-    - "../meta-openembedded/meta-oe"
-    - "../meta-openembedded/meta-python"
-    - "../meta-openembedded/meta-networking"
-    - "../meta-openembedded/meta-filesystems"
-    - "../meta-xt-common/meta-xt-domx"
-    - "../meta-selinux"
-    - "../meta-virtualization"
 
 components:
   dom0:
@@ -225,15 +222,30 @@ components:
         - [AOS_NODE_ID, "%{AOS_DOMD_NODE_ID}"]
         - [AOS_NODE_TYPE, "%{AOS_DOMD_NODE_TYPE}"]
 
+        - [AOS_SM_NODES, "main-domd main-dom0"]
+        - [AOS_IAM_NODES, "main-domd main-dom0"]
+        - [AOS_IAM_HOSTNAMES, "main-domd main-domd:8096"]
+        - [AOS_HOSTS, "127.0.0.1=wwwivi"]
+        - [AOS_VIS_DATA_PROVIDER, "%{AOS_VIS_DATA_PROVIDER}"]
+
       build_target: "%{AOS_BASE_IMAGE}"
       layers:
-        - *COMMON_YOCTO_LAYERS
-        - "../meta-raspberrypi"
+        - "../meta-virtualization"
+        - "../meta-openembedded/meta-oe"
+        - "../meta-openembedded/meta-networking"
         - "../meta-openembedded/meta-perl"
+        - "../meta-openembedded/meta-python"
+        - "../meta-openembedded/meta-filesystems"
+        - "../meta-security"
+        - "../meta-selinux"
+        - "../meta-aos"
+        - "../meta-xt-common/meta-xt-domx"
         - "../meta-xt-common/meta-xt-driver-domain"
         - "../meta-xt-common/meta-xt-security"
+
+        - "../meta-raspberrypi"
         - "../meta-xt-rpi5"
-        - "../meta-aos"
+        - "../meta-aos-rpi5/meta-aos-rpi5-domx"
         - "../meta-aos-rpi5/meta-aos-rpi5-domd"
 
       target_images:
@@ -371,6 +383,20 @@ images:
         size: 4096 MiB
 
 parameters:
+  # Aos VIS data provider
+  VIS_DATA_PROVIDER:
+    desc: "Specifies plugin for VIS automotive data"
+    renesassimulator:
+      default: true
+      overrides:
+        variables:
+          AOS_VIS_DATA_PROVIDER: "renesassimulatoradapter"
+
+    telemetryemulator:
+      overrides:
+        variables:
+          AOS_VIS_DATA_PROVIDER: "telemetryemulatoradapter"
+
   # Machines
   MACHINE:
     desc: "Raspberry Pi machines"
