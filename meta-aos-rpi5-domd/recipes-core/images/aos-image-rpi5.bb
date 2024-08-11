@@ -34,7 +34,7 @@ IMAGE_INSTALL:append = " \
     openssh \
 "
 
-IMAGE_INSTALL:append = " iproute2 iproute2-tc tcpdump nvme-cli"
+IMAGE_INSTALL:append = " iproute2 iproute2-tc tcpdump"
 
 # IMAGE_INSTALL:append = " kernel-module-nvme-core kernel-module-nvme"
 

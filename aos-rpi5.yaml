@@ -20,6 +20,13 @@ variables:
   XT_DOMD_DTB_NAME: "%{SOC_FAMILY}-%{MACHINE}-domd.dtb"
   XT_XEN_DTB_NAME: "%{SOC_FAMILY}-%{MACHINE}-xen.dtb"
 
+  # Addresses for u-boot
+  DOMD_IMG_ADDR: "0x1600000"
+  DOMD_DTB_ADDR: "0xb000000"
+  XEN_IMG_ADDR: "0xb100000"
+  XEN_DTBO_ADDR: "0xb300000"
+  XENPOLICY_IMG_ADDR: "0xb400000"
+
 
   # Aos config
   AOS_UNIT_MODEL: "rpi-multinode-zephyr"
@@ -48,6 +55,10 @@ common_data:
     - type: git
       url: "https://git.openembedded.org/meta-openembedded"
       rev: "80e01188fa822d87d301ee71973c462d7a865493"
+
+    - type: git
+      url: "https://github.com/kraj/meta-clang"
+      rev: "scarthgap"
 
     - type: git
       url: "https://github.com/xen-troops/meta-xt-common.git"
@@ -124,7 +135,7 @@ common_data:
     - [DISTRO_FEATURES:remove, "ptest"]
 
     # Enable SELinux
-    - [DISTRO_FEATURES:append, " acl xattr pam selinux"]
+    # - [DISTRO_FEATURES:append, " acl xattr pam selinux"]
 
     - [FIRST_BOOT_RELABEL, "1"]
 
@@ -148,6 +159,14 @@ common_data:
     # Image versions
     - [AOS_ROOTFS_IMAGE_VERSION, "%{AOS_BUNDLE_IMAGE_VERSION}"]
     - [AOS_BOOT_IMAGE_VERSION, "%{AOS_BUNDLE_IMAGE_VERSION}"]
+
+
+    # Addresses for u-boot
+    - [DOMD_IMG_ADDR, "0x1600000"]
+    - [DOMD_DTB_ADDR, "0xb000000"]
+    - [XEN_IMG_ADDR, "0xb100000"]
+    - [XEN_DTBO_ADDR, "0xb300000"]
+    - [XENPOLICY_IMG_ADDR, "0xb400000"]
 
 components:
   dom0:
@@ -182,9 +201,14 @@ components:
       - type: git
         url: "https://git.yoctoproject.org/meta-raspberrypi"
         rev: "1918a27419dcd5e79954c0dc0edddcde91057a7e"
+
+      # - type: git
+      #   url: "https://github.com/xen-troops/meta-xt-rpi5.git"
+      #   rev: "v0.2.0"
+
       - type: git
-        url: "https://github.com/xen-troops/meta-xt-rpi5.git"
-        rev: "v0.2.0"
+        url: "https://github.com/GrygiriiS/meta-xt-rpi5.git"
+        rev: "v0.2-fix_net_irq"
 
     builder:
       type: yocto
@@ -236,6 +260,7 @@ components:
         - "../meta-openembedded/meta-perl"
         - "../meta-openembedded/meta-python"
         - "../meta-openembedded/meta-filesystems"
+        - "../meta-clang"
         - "../meta-security"
         - "../meta-selinux"
         - "../meta-aos"
