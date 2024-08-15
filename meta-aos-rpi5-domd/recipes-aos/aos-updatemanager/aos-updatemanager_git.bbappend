@@ -8,7 +8,6 @@ SRC_URI += " \
     file://optee-identity.conf \
     file://reboot-on-failure.conf \
     file://aos-reboot.service \
-
     git://git@${RENESASOTA_IMPORT}.git;branch=main;protocol=ssh;name=renesasota;destsuffix=${S}/src/${GO_IMPORT}/vendor/${RENESASOTA_IMPORT} \
 "
 
