@@ -322,7 +322,7 @@ components:
         - "tmp/deploy/images/%{MACHINE}/u-boot-%{MACHINE}.bin"
 
 images:
-  full:
+  dom0:
     type: gpt
     desc: "Full RPI image"
     sector_size: 512
@@ -381,7 +381,7 @@ images:
         items:
           "aos": "%{YOCTOS_WORK_DIR}/%{DOMD_BUILD_DIR}/tmp/deploy/images/%{MACHINE}/aos"
 
-  rootfs:
+  domd:
     type: gpt
     desc: "Full RPI image"
     sector_size: 512
