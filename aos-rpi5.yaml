@@ -266,7 +266,6 @@ components:
 
         - "../meta-raspberrypi"
         - "../meta-xt-rpi5"
-        - "../meta-aos-rpi5/meta-aos-rpi5-domx"
         - "../meta-aos-rpi5/meta-aos-rpi5-domd"
 
       target_images:
