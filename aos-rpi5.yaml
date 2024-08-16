@@ -266,7 +266,7 @@ components:
 
         - "../meta-raspberrypi"
         - "../meta-xt-rpi5"
-        - "../meta-aos-rpi5/meta-aos-rpi5-domd"
+        - "../meta-aos-rpi5/meta-aos-rpi-domd"
 
       target_images:
         - "tmp/deploy/images/%{MACHINE}/xen-%{MACHINE}"
