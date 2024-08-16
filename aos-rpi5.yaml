@@ -44,7 +44,7 @@ variables:
   AOS_ROOTFS_REF_VERSION: "2.2.2"
   AOS_UM_COMPONENT_PREFIX: "%{AOS_UNIT_MODEL}-%{AOS_UNIT_VERSION}-%{MACHINE}-"
 
-  AOS_BASE_IMAGE: "aos-image-rpi5"
+  AOS_BASE_IMAGE: "aos-image-rpi"
 
 common_data:
   common_yocto_sources: &COMMON_YOCTO_SOURCES

@@ -1,10 +1,31 @@
-SUMMARY = "A small image just capable of allowing a device to boot."
+SUMMARY = "Aos image for Raspberry Pi devices"
 
-# require recipes-core/images/core-image-minimal.bb
-require recipes-core/image/rpi5-image-xt-domd.bb
+require recipes-core/images/core-image-minimal.bb
 require recipes-core/images/aos-image.inc
 
+# Enable package manager
+EXTRA_IMAGE_FEATURES += "package-management"
+
+RDEPENDS += "rpi-bootfiles trusted-firmware-a"
+
+do_image[depends] += " \
+    rpi-bootfiles:do_deploy \
+    trusted-firmware-a:do_deploy \
+    ${@bb.utils.contains('RPI_USE_U_BOOT', '1', 'u-boot-tools-native:do_populate_sysroot', '',d)} \
+    ${@bb.utils.contains('RPI_USE_U_BOOT', '1', 'u-boot:do_deploy', '',d)} \
+    ${@bb.utils.contains('RPI_USE_U_BOOT', '1', 'u-boot-default-script:do_deploy', '',d)} \
+"
+
 PACKAGE_INSTALL:append = " \
+    coreutils \
+    u-boot \
+    xen \
+    xen-tools-scripts-network \
+    xen-tools-scripts-block \
+    xen-tools-xenstore \
+    xen-tools-devd \
+    virtual-xenstored \
+    xen-network \
     kernel-modules \
 "
 
@@ -20,9 +41,6 @@ IMAGE_INSTALL:append = " \
     pciutils \
     devmem2 \
     optee-test \
-"
-
-IMAGE_INSTALL:append = " \
     xen \
     xen-tools-devd \
     xen-tools-scripts-network \
@@ -34,17 +52,16 @@ IMAGE_INSTALL:append = " \
     openssh \
 "
 
-IMAGE_INSTALL:append = " iproute2 iproute2-tc tcpdump"
-
-# IMAGE_INSTALL:append = " kernel-module-nvme-core kernel-module-nvme"
-
-# IMAGE_INSTALL:append = " kernel-module-ixgbe"
-
-IMAGE_INSTALL:append = " e2fsprogs"
-
 IMAGE_INSTALL:append = " \
+    iproute2 \
+    iproute2-tc \
+    tcpdump \
+    e2fsprogs \
     aos-messageproxy \
 "
+
+IMAGE_FSTYPES:remove = "wic.bz2 wic.bmap ext3"
+IMAGE_FSTYPES:append = " ext4"
 
 # Set fixed rootfs size
 IMAGE_ROOTFS_SIZE ?= "1048576"
